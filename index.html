@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> nodb_table a Base64URL Table Viewer</title>
+    <title>nodb_table a Base64URL Table Viewer</title>
     <style>
         :root {
             --bg-body: #f8fafc;
@@ -234,11 +234,13 @@
         function renderTable() {
             const container = document.getElementById('content');
             
-            const urlParams = new URLSearchParams(window.location.search);
-            const encodedData = urlParams.get('data');
+            // Read from URL hash fragment instead of query string
+            const hashContent = window.location.hash.substring(1); // Remove leading '#'
+            const hashParams = new URLSearchParams(hashContent);
+            const encodedData = hashParams.get('data');
 
             if (!encodedData) {
-                container.innerHTML = `<div class="empty">No 'data' query parameter found in URL. Please provide a Base64URL string.</div>`;
+                container.innerHTML = `<div class="empty">No 'data' hash parameter found in URL (e.g. #data=...). Please provide a Base64URL string in the hash.</div>`;
                 return;
             }
 
