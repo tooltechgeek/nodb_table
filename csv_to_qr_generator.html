@@ -1,0 +1,476 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSV → QR codes — Multi-Template</title>
+<style>
+:root{color-scheme:light;--ink:#202124;--muted:#62676d;--line:#d9dde2;--paper:#fff;--soft:#f6f7f8}
+*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:900px;margin:40px auto;padding:0 20px}h1{font-size:1.5rem;margin:0 0 5px}p{color:var(--muted);margin:0 0 20px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0}
+label{display:block;font-weight:600;margin:12px 0 6px}input[type=text],input[type=url],input[type=number],select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:7px;font:inherit;background:var(--paper)}
+input[type=file]{max-width:100%;font:inherit}button{background:var(--ink);color:#fff;border:0;border-radius:7px;padding:10px 15px;font:inherit;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:15px}.hint{font-size:.9rem;color:var(--muted)}#status{margin-top:12px;white-space:pre-wrap}
+#results{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{background:white;border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card h2{font-size:1rem;margin:0 0 10px;overflow-wrap:anywhere}
+.qr{min-height:180px;display:flex;align-items:center;justify-content:center;background:#fff}
+.qr canvas,.qr img{max-width:100%;height:auto}
+.card a{display:inline-block;margin-top:10px;color:var(--ink)}
+code{background:var(--soft);padding:2px 4px;border-radius:4px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+@media(max-width:520px){main{margin:22px auto}.panel{padding:15px}.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>CSV → QR codes</h1>
+  <p>Offline CSV-to-QR utility. Each row becomes a URL with Base64URL-encoded JSON in its <code>#data=</code> fragment.</p>
+  <section class="panel">
+    <label for="templateSelect">Label Template / Size</label>
+    <select id="templateSelect">
+      <option value="square_one_inch"> (1" x 1" — 48 per sheet) Compatible with Avery  5658 </option>
+      <option value="square_one_and_half_inch"> (1.5" x 1.5" — 24 per sheet) Compatible with Avery  22805 </option>
+      <option value="square_two_inch"> (2" x 2" — 12 per sheet) Compatible with Avery  22806</option>
+      <option value="square_three_quarter_inch"> (0.75" x 0.75" — 80 per sheet) Compatible with Avery Presta 94102</option>
+      <option value="square_two_inch_20_labels"> (2" x 2" — 20 per sheet) Compatible with Avery Presta 94069</option>
+      <option value="rect_four_by_two_and_half_inch"> (4" x 2.5" — 8 per sheet) Compatible with Avery Presta 94075</option>
+    </select>
+
+    <div class="grid-2">
+      <div>
+        <label for="startRow">Start Row (1-indexed)</label>
+        <input id="startRow" type="number" min="1" value="1">
+      </div>
+      <div>
+        <label for="startCol">Start Column (1-indexed)</label>
+        <input id="startCol" type="number" min="1" value="1">
+      </div>
+    </div>
+
+    <label for="csv">CSV file</label>
+    <input id="csv" type="file" accept=".csv,text/csv">
+    <label for="base">Base URL</label>
+    <input id="base" type="url" value="https://tooltechgeek.github.io/nodb_table/">
+    <div class="row">
+      <button id="generate">Generate QR codes</button>
+      <button id="downloadAll" disabled>Download all PNGs</button>
+      <button id="downloadPdf" disabled>Download PDF</button>
+    </div>
+    <div id="status" class="hint" role="status">Choose a CSV file with an <code>id</code> column.</div>
+    <p class="hint" style="margin:12px 0 0">CSV parsing, JSON encoding, Base64URL encoding and file downloads run locally in this browser. No file is uploaded.</p>
+    <p style="margin-top: 40px; font-size: 0.75rem; color: #666666;">Before printing on label stock, print a test sheet on ordinary paper at 100% scale and check alignment.
+</p>  
+    
+<p style="margin-top: 40px; font-size: 0.75rem; color: #666666;">
+  Avery is a trademark of Avery Products Corporation. This software is not 
+  affiliated with, sponsored by, or endorsed by Avery Products Corporation.
+</p>  
+  </section>
+  <section id="results" aria-live="polite"></section>
+  
+</main>
+
+<script src="./qrcode.js"></script>
+<script src="./pdf-lib.js"></script>
+<script>
+/*
+ * =========================================================================
+ * LABEL TEMPLATE CONFIGURATIONS
+ * Dimensions are specified in inches (1 inch = 72 points).
+ * =========================================================================
+ */
+const LABEL_CONFIGS = {
+  square_one_inch: {
+    templateName: 'One_inch_labels',
+    outputFilename: 'one-inch-qr-labels.pdf',
+    pageWidthInches: 8.5,
+    pageHeightInches: 11.0,
+    cols: 6,
+    rows: 8,
+    labelWidthInches: 1.0,
+    labelHeightInches: 1.0,
+    marginLeftInches: 0.65,
+    marginTopInches: 0.65,
+    horizontalPitchInches: 1.25,
+    verticalPitchInches: 1.25,
+    layoutMode: 'vertical',
+    paddingInches: 0.05
+  },
+  square_one_and_half_inch: {
+    templateName: 'One_point_five_inch_labels',
+    outputFilename: 'one-point-five-inch_qr-labels.pdf',
+    pageWidthInches: 8.5,
+    pageHeightInches: 11.0,
+    cols: 4,
+    rows: 6,
+    labelWidthInches: 1.5,
+    labelHeightInches: 1.5,
+    marginLeftInches: 0.77,
+    marginTopInches: 0.5,
+    horizontalPitchInches: 1.81,
+    verticalPitchInches: 1.7,
+    layoutMode: 'vertical',
+    paddingInches: 0.05
+  },
+  square_two_inch: {
+    templateName: 'Two_inch_labels',
+    outputFilename: 'two-inch-qr-labels.pdf',
+    pageWidthInches: 8.5,
+    pageHeightInches: 11.0,
+    cols: 3,
+    rows: 4,
+    labelWidthInches: 2.0,
+    labelHeightInches: 2.0,
+    marginLeftInches: 0.625,
+    marginTopInches: 0.625,
+    horizontalPitchInches: 2.625,
+    verticalPitchInches: 2.5833333333,
+    layoutMode: 'vertical',
+    paddingInches: 0.05
+  },
+  square_three_quarter_inch: {
+    templateName: 'square_three_quarter_inch',
+    outputFilename: 'square_three_quarter_inch-qr-labels.pdf',
+    pageWidthInches: 8.5,
+    pageHeightInches: 11.0,
+    cols: 8,
+    rows: 10,
+    labelWidthInches: 0.75,
+    labelHeightInches: 0.75,
+    marginLeftInches: 0.375,
+    marginTopInches: 0.625,
+    horizontalPitchInches: 1.0,
+    verticalPitchInches: 0.9166666667,
+    layoutMode: 'vertical',
+    paddingInches: 0.025
+  },
+  square_two_inch_20_labels: {
+    templateName: 'square_two_inch_20_labels',
+    outputFilename: 'square_two_inch_20_labels-qr-labels.pdf',
+    pageWidthInches: 8.5,
+    pageHeightInches: 11.0,
+    cols: 4,
+    rows: 5,
+    labelWidthInches: 2.0,
+    labelHeightInches: 2.0,
+    marginLeftInches: 0.25,
+    marginTopInches: 0.25,
+    horizontalPitchInches: 2.0,
+    verticalPitchInches: 2.0,
+    layoutMode: 'vertical',
+    paddingInches: 0.05
+  },
+  rect_four_by_two_and_half_inch: {
+    templateName: 'rect_four_by_two_and_half_inch',
+    outputFilename: 'rect_four_by_two_and_half_inch-qr-labels.pdf',
+    pageWidthInches: 8.5,
+    pageHeightInches: 11.0,
+    cols: 2,
+    rows: 4,
+    labelWidthInches: 4.0,
+    labelHeightInches: 2.5,
+    marginLeftInches: 0.125,
+    marginTopInches: 0.5,
+    horizontalPitchInches: 4.125,
+    verticalPitchInches: 2.625,
+    layoutMode: 'vertical',
+    paddingInches: 0.08
+  }
+};
+
+(() => {
+  const STORAGE_KEY = 'nodb_qr_preferred_template';
+  const templateSelect = document.getElementById('templateSelect');
+  const startRowInput = document.getElementById('startRow');
+  const startColInput = document.getElementById('startCol');
+  const fileInput = document.getElementById('csv');
+  const baseInput = document.getElementById('base');
+  const generateBtn = document.getElementById('generate');
+  const downloadAllBtn = document.getElementById('downloadAll');
+  const downloadPdfBtn = document.getElementById('downloadPdf');
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+  let generated = [];
+
+  // Restore recently used template from localStorage
+  const savedTemplate = localStorage.getItem(STORAGE_KEY);
+  if (savedTemplate && LABEL_CONFIGS[savedTemplate]) {
+    templateSelect.value = savedTemplate;
+  }
+
+  function getActiveConfig() {
+    return LABEL_CONFIGS[templateSelect.value] || LABEL_CONFIGS['square_two_inch'];
+  }
+
+  function updatePdfButtonLabel() {
+    const config = getActiveConfig();
+    downloadPdfBtn.textContent = `Download ${config.templateName} PDF`;
+  }
+
+  templateSelect.addEventListener('change', () => {
+    localStorage.setItem(STORAGE_KEY, templateSelect.value);
+    updatePdfButtonLabel();
+  });
+
+  updatePdfButtonLabel();
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = '', quoted = false;
+    text = text.replace(/^\uFEFF/, '');
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i], next = text[i + 1];
+      if (quoted) {
+        if (c === '"' && next === '"') { field += '"'; i++; }
+        else if (c === '"') quoted = false;
+        else field += c;
+      } else if (c === '"' && field.length === 0) quoted = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && next === '\n') i++;
+        row.push(field); field = '';
+        if (row.some(v => v.length)) rows.push(row);
+        row = [];
+      } else field += c;
+    }
+    row.push(field);
+    if (row.some(v => v.length)) rows.push(row);
+    if (!rows.length) throw new Error('The CSV file is empty.');
+    const headers = rows.shift().map(h => h.trim());
+    if (!headers.includes('id')) throw new Error('CSV file must contain a column named "id".');
+    return rows.map(values => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = values[i] ?? '');
+      return obj;
+    });
+  }
+
+  function base64urlUTF8(value) {
+    const bytes = new TextEncoder().encode(value);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function safeFilename(name) {
+    return name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'qr-code';
+  }
+
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function cardFor(rowId, url) {
+    const card = document.createElement('article'); card.className = 'card';
+    const title = document.createElement('h2'); title.textContent = rowId;
+    const qr = document.createElement('div'); qr.className = 'qr';
+    const link = document.createElement('a'); link.textContent = 'Download PNG';
+    link.download = safeFilename(rowId) + '-QR.png';
+    card.append(title, qr, link);
+    new QRCode(qr, {text:url, width:300, height:300, colorDark:'#000000',
+      colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.L});
+    const syncDownload = () => {
+      const img = qr.querySelector('img');
+      const canvas = qr.querySelector('canvas');
+      if (img && img.src.startsWith('data:')) link.href = img.src;
+      else if (canvas) { try { link.href = canvas.toDataURL('image/png'); } catch (_) {} }
+    };
+    setTimeout(syncDownload, 100);
+    return {card, qr, link, filename:safeFilename(rowId)+'-QR.png'};
+  }
+
+  generateBtn.addEventListener('click', async () => {
+    results.replaceChildren(); generated = []; downloadAllBtn.disabled = true; downloadPdfBtn.disabled = true;
+    const file = fileInput.files[0];
+    if (!file) { status.textContent = 'Choose a CSV file first.'; return; }
+    if (typeof window.QRCode !== 'function') {
+      status.textContent = 'Could not load ./qrcode.js. Make sure qrcode.js is in the same folder as this HTML file.';
+      return;
+    }
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      const base = baseInput.value.trim();
+      if (!base) throw new Error('Enter a base URL.');
+      let skipped = 0;
+      rows.forEach((row, i) => {
+        const rowId = String(row.id ?? '').trim();
+        if (!rowId) { skipped++; return; }
+        const tableData = Object.keys(row).filter(k => k !== 'id')
+          .map(name => ({name, value:row[name]}));
+        const encoded = base64urlUTF8(JSON.stringify(tableData));
+        const url = base.replace(/#.*$/, '').replace(/\/?$/, '/') + '#data=' + encoded;
+        try {
+          const item = cardFor(rowId, url);
+          results.appendChild(item.card);
+          generated.push({url, ...item});
+        } catch (e) { throw new Error(`Row ${i + 2} (${rowId}): ${e.message}`); }
+      });
+      if (!generated.length) throw new Error('No rows with a non-empty id were found.');
+      downloadAllBtn.disabled = false; downloadPdfBtn.disabled = false;
+      status.textContent = `Generated ${generated.length} QR code(s).${skipped ? ` Skipped ${skipped} row(s) with empty id.` : ''}`;
+    } catch (e) { status.textContent = 'Error: ' + e.message; }
+  });
+
+  downloadAllBtn.addEventListener('click', () => {
+    generated.forEach((item, i) => setTimeout(() => {
+      const img = item.qr.querySelector('img');
+      const canvas = item.qr.querySelector('canvas');
+      let data = img && img.src.startsWith('data:') ? img.src : null;
+      if (!data && canvas) { try { data = canvas.toDataURL('image/png'); } catch (_) {} }
+      if (!data) return;
+      const a = document.createElement('a'); a.href = data; a.download = item.filename;
+      document.body.appendChild(a); a.click(); a.remove();
+    }, i * 250));
+  });
+
+  downloadPdfBtn.addEventListener('click', async () => {
+    if (!generated.length) return;
+    if (!window.PDFLib || !PDFLib.PDFDocument) {
+      status.textContent = 'Could not load ./pdf-lib.js. Make sure pdf-lib.js is in the same folder as this HTML file.';
+      return;
+    }
+    const config = getActiveConfig();
+    try {
+      status.textContent = `Creating ${config.templateName} PDF…`;
+      const { PDFDocument, StandardFonts, rgb } = PDFLib;
+      const pdf = await PDFDocument.create();
+
+      const pageW = config.pageWidthInches * 72;
+      const pageH = config.pageHeightInches * 72;
+      const labelW = config.labelWidthInches * 72;
+      const labelH = config.labelHeightInches * 72;
+      const cols = config.cols;
+      const rows = config.rows;
+      const maxSlotsPerPage = cols * rows;
+
+      // Get user starting position, validate bounds
+      let startR = parseInt(startRowInput.value, 10) || 1;
+      let startC = parseInt(startColInput.value, 10) || 1;
+      if (startR < 1) startR = 1;
+      if (startR > rows) startR = rows;
+      if (startC < 1) startC = 1;
+      if (startC > cols) startC = cols;
+
+      const startIndex = (startR - 1) * cols + (startC - 1);
+
+      const horizPitch = (config.horizontalPitchInches || config.labelWidthInches) * 72;
+      const vertPitch = (config.verticalPitchInches || config.labelHeightInches) * 72;
+
+      const totalGridWidth = (cols - 1) * horizPitch + labelW;
+      const totalGridHeight = (rows - 1) * vertPitch + labelH;
+      const marginLeft = config.marginLeftInches != null ? config.marginLeftInches * 72 : (pageW - totalGridWidth) / 2;
+      const marginTop = config.marginTopInches != null ? config.marginTopInches * 72 : (pageH - totalGridHeight) / 2;
+
+      const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+      const pad = (config.paddingInches || 0.1) * 72;
+
+      // Total slots needed = starting offset + number of labels
+      const totalSlotsNeeded = startIndex + generated.length;
+      const totalPages = Math.ceil(totalSlotsNeeded / maxSlotsPerPage);
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const page = pdf.addPage([pageW, pageH]);
+        const slotStart = pageIndex * maxSlotsPerPage;
+        const slotEnd = slotStart + maxSlotsPerPage;
+
+        // Find which items from 'generated' land on this page
+        for (let slot = slotStart; slot < slotEnd; slot++) {
+          if (slot < startIndex) continue; // Skip already used slots on the first page
+          const itemIndex = slot - startIndex;
+          if (itemIndex >= generated.length) break; // No more labels to print
+
+          const item = generated[itemIndex];
+
+          // Calculate row and col relative to the current page
+          const pageSlot = slot - (pageIndex * maxSlotsPerPage);
+          const col = pageSlot % cols;
+          const row = Math.floor(pageSlot / cols);
+          
+          const x = marginLeft + col * horizPitch;
+          const y = pageH - marginTop - row * vertPitch - labelH;
+
+          const img = item.qr.querySelector('img');
+          const canvas = item.qr.querySelector('canvas');
+          let dataUrl = img && img.src.startsWith('data:') ? img.src : null;
+          if (!dataUrl && canvas) dataUrl = canvas.toDataURL('image/png');
+          if (!dataUrl) throw new Error('Could not export QR image for ' + item.filename);
+          
+          const png = await pdf.embedPng(dataUrl);
+          const id = item.card.querySelector('h2').textContent;
+
+          if (config.layoutMode === 'vertical') {
+            const textGap = 1.5;
+            const textBaseline = y + pad;
+            const maxTextW = labelW - 2 * pad;
+            let fontSize = 8;
+            while (font.widthOfTextAtSize(id, fontSize) > maxTextW && fontSize > 5) {
+              fontSize--;
+            }
+            const textW = font.widthOfTextAtSize(id, fontSize);
+            const textHeight = font.heightAtSize(fontSize);
+
+            const textAreaH = pad + textHeight + textGap;
+            const availableQrH = labelH - pad - textAreaH;
+            const qrSize = Math.max(1, Math.min(labelW - 2 * pad, availableQrH));
+
+            page.drawImage(png, {
+              x: x + (labelW - qrSize) / 2,
+              y: textBaseline + textHeight + textGap,
+              width: qrSize,
+              height: qrSize
+            });
+
+            page.drawText(id, {
+              x: x + (labelW - textW) / 2,
+              y: textBaseline,
+              size: fontSize,
+              font,
+              color: rgb(0, 0, 0),
+              maxWidth: maxTextW
+            });
+
+          } else {
+            const qrSize = Math.min(labelW - 2 * pad, labelH - 2 * pad);
+            page.drawImage(png, {
+              x: x + pad,
+              y: y + (labelH - qrSize) / 2,
+              width: qrSize,
+              height: qrSize
+            });
+
+            const maxTextW = labelW - qrSize - 3 * pad;
+            let fontSize = 14;
+            while (font.widthOfTextAtSize(id, fontSize) > maxTextW && fontSize > 6) fontSize--;
+            
+            page.drawText(id, {
+              x: x + qrSize + 2 * pad,
+              y: y + labelH / 2 - fontSize / 2,
+              size: fontSize,
+              font,
+              color: rgb(0, 0, 0),
+              maxWidth: maxTextW
+            });
+          }
+        }
+      }
+
+      const bytes = await pdf.save();
+      downloadBlob(new Blob([bytes], {type:'application/pdf'}), config.outputFilename);
+      status.textContent = `PDF created: ${generated.length} label(s) starting at Row ${startR}, Col ${startC} (${totalPages} page(s)). Print at Actual Size / 100%.`;
+    } catch (e) {
+      status.textContent = 'PDF error: ' + e.message;
+    }
+  });
+})();
+</script>
+</body>
+</html>
+
+```
