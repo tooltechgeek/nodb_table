@@ -159,23 +159,12 @@ control, or workflows that require audit trails and centralized updates.
 
 ## Project files
 
-  -----------------------------------------------------------------------
-  File                                Purpose
-  ----------------------------------- -----------------------------------
-  `csv_to_qr_generator.html`          Generator interface for importing
-                                      CSV data, previewing QR codes, and
-                                      creating label output.
-
-  `index.html`                        Reader page that decodes the
-                                      embedded payload and displays the
-                                      record.
-
-  `qrcode.js`                         JavaScript library used to render
-                                      QR codes locally in the browser.
-
-  `pdf-lib.js`                        JavaScript library used to create
-                                      PDF label sheets in the browser.
-  -----------------------------------------------------------------------
+| File | Purpose |
+| :--- | :--- |
+| `csv_to_qr_generator.html` | Generator interface for importing CSV data, previewing QR codes, and creating label output. |
+| `index.html` | Reader page that decodes the embedded payload and displays the record. |
+| `qrcode.js` | JavaScript library used to render QR codes locally in the browser. |
+| `pdf-lib.js` | JavaScript library used to create PDF label sheets in the browser. |
 
 The JavaScript libraries need to be available in the locations expected
 by the HTML files.
