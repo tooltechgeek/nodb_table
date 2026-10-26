@@ -5,6 +5,8 @@ data.** Scan a label to view and copy its contents in a
 browser---without maintaining a backend database or relying on a
 dedicated app.
 
+[![Watch the video](https://img.youtube.com/vi/nw5yWiItUSc/0.jpg)](https://www.youtube.com/watch?v=nw5yWiItUSc)
+
 ## What is it?
 
 Imagine labeling a storage box, workshop tool, laboratory sample, or
