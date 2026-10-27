@@ -1,124 +1,41 @@
 # Data-in-QR: Printable QR Labels That Carry Their Own Data
 
-**Turn a spreadsheet into printable QR labels that carry their own
+<img width="265" height="498" alt="reader" src="https://github.com/user-attachments/assets/bb605a86-29df-42bb-a6dc-3b35544885cd" />
+
+
+
+**Printable QR labels that carry their own
 data.** Scan a label to view and copy its contents in a
 browser---without maintaining a backend database or relying on a
 dedicated app.
 
+## How It Works: Serverless Data Transport via URL Hash
 
-## What is it?
+This project implements a lightweight, database-free architecture for conveying and extracting structured data straight from a QR code. By leveraging standard client-side web technologies and the URL fragment identifier, the system operates entirely without backend infrastructure, server databases, or companion apps.
 
-Imagine labeling a storage box, workshop tool, laboratory sample, or
-piece of equipment. Scan its QR code with a smartphone and a table
-appears with the information associated with that object: its name, ID,
-specifications, owner, notes, or other fields you chose to include.
+### Core Mechanics
 
-The key difference from many conventional QR labels is that **the record
-is embedded in the QR code itself**. The reader does not need to look up
-the record in a database.
+1. **Encoded URL Structure**: The QR code encodes a static web page URL paired with a URL hash fragment (e.g., `[http://www.example.org/foo.html#bar](http://www.example.org/foo.html#bar)`).
 
-The project uses a CSV file to create printable QR labels and a static
-HTML page to display the data. You can copy individual fields or copy
-the whole record in a format suitable for a spreadsheet, report, or
-other application.
 
-## What can you use it for?
+2. **Static Hosting**: The base URL points to a lightweight, standalone HTML/JS reader hosted statically (such as on GitHub Pages). Because hash fragments are processed exclusively on the client side, the payload is never transmitted to a server.
 
--   **Workshop and hobby storage:** Label boxes, component drawers,
-    tools, and 3D-printing supplies.
--   **Equipment identification:** Make model numbers, specifications,
-    and replacement-part information available beside equipment.
--   **Laboratory samples:** Associate samples with structured metadata
-    and notes.
--   **Warehouse storage:** Print labels showing the contents of bins,
-    cartons, or containers.
--   **Product documentation:** Attach product details and reference
-    information to physical objects.
--   **Household organization:** Label moving boxes, storage containers,
-    and household supplies.
--   **Business Card:** Your customer can scan the QR and copy/paste your contact information without having it exposed to the open web.
-     
-These are examples, not a claim that the project replaces a full
-inventory-management system. It is best suited to relatively small
-records that do not change frequently.
 
-## How it works
+3. **Client-Side Extraction**: When a user scans the QR code, their mobile browser loads the static reader script, which instantly parses the data payload contained within the URL hash (`#bar`).
 
-`CSV file → QR labels containing the data → Browser displays the record`
 
-1.  **Prepare a CSV file.** Include an `id` column and other custom columns for the fields you
-    want each record to contain. 
-2.  **Generate the labels.** Open the generator in a browser, load the
-    CSV, pick a label template, then generate the
-    output.
-3.  **Print and attach.** Print the labels and attach them to the
-    relevant objects. 
-4.  **Scan and use the data.** Scan a QR code to open the reader and
-    view the record. Copy individual fields or export the record as a
-    table.
+4. **Interactive Presentation**: The client-side script decodes the fragment and renders a clean, mobile-friendly interface equipped with one-tap **Copy** buttons for individual fields as well as a **Copy All** action.
 
-Each row is encoded as JSON and represented in a Base64URL-encoded URL
-fragment (`#data=`). The reader decodes the payload in the browser and
-displays the record.
+5. **Open source QR code generator included**: We also include an auxiliar HTML/JS based generator. Drag and drop a csv file and instantly get printable labels formatted for standard adhesive label templates. 
 
-## Quick start
 
-### What you'll need
-
--   The project HTML files and their required JavaScript libraries.
--   A CSV file containing the records to encode.
--   A modern web browser.
--   A printer if you want physical labels.
-
-### 1. Prepare your CSV
-
-For example:
-
-``` csv
-id,item,location,notes
-BOX-001,Electronic components,Workshop shelf A,Resistors and capacitors
-BOX-002,3D printing supplies,Workshop shelf B,Nozzles and maintenance kit
-BOX-003,Test instruments,Workbench,Multimeter accessories
-```
-
-The `id` column identifies each record. The other columns become fields
-shown by the reader. The `id` information will print as text under the QR, so keep it small!.
-
-### 2. Generate labels
-
-Open `csv_to_qr_generator.html` in your browser and load your CSV file.
-Choose the appropriate label layout and configure the base URL so that
-the generated QR codes point to your reader page.
-
-Generate the labels and export them in one of the formats supported by
-the generator, such as a printable PDF sheet or PNG images.
-
-You can reuse partially printed sheets by starting printing at a specified row, column position in the grid. (Huge paper saver!)
-
-### 3. Print and scan
-
-Print the labels, attach one to an object, and scan it with your phone.
-The reader page displays the data embedded in that QR code.
-
-### 4. Copy the information
-
-Use the reader's copy controls to copy individual fields or the full
-record. The reader supports exporting data in formats including TSV,
-CSV, JSON, and Markdown.
-
-> **Reader URL:** The base URL in each QR code must point to a location
-> where `index.html` is accessible. If you host the reader online, a
-> phone generally needs an internet connection to load the page. Offline
-> use is possible when the reader page and its dependencies are
-> available locally (i.e by being cached by the browser).
-> Hint: Modify the html source to have your own hosted URL as default.
- 
 ## Why use this instead of a database-backed QR system?
 
 -   **No backend database required:** The record travels inside the QR
     code instead of being fetched from a server-side record store.
--   **Works with ordinary tools:** Use a spreadsheet to prepare the data
-    and a browser to generate or read labels.
+-   **No app to install:** Ready to use from any mobile phone/tablet. 
+-   **Use generic software to generate labels:** Use a spreadsheet or text editor to prepare the data
+    and a browser to generate them.
 -   **Portable records:** Anyone who can access the reader can view and
     copy the embedded data without needing an account in a dedicated
     application.
@@ -164,8 +81,8 @@ control, or workflows that require audit trails and centralized updates.
 | :--- | :--- |
 | `csv_to_qr_generator.html` | Generator interface for importing CSV data, previewing QR codes, and creating label output. |
 | `index.html` | Reader page that decodes the embedded payload and displays the record. |
-| `qrcode.js` | JavaScript library used to render QR codes locally in the browser. |
-| `pdf-lib.js` | JavaScript library used to create PDF label sheets in the browser. |
+| `qrcode.js` | JavaScript library used to render QR codes locally in the browser (see reference below). |
+| `pdf-lib.js` | JavaScript library used to create PDF label sheets in the browser (see reference below). |
 
 The JavaScript libraries need to be available in the locations expected
 by the HTML files.
