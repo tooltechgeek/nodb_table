@@ -45,10 +45,11 @@
         }
 
         /* Table Styling */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Ensures column widths strictly obey set widths/max-widths */
+}
 
         th {
             background-color: var(--bg-subtle);
@@ -69,11 +70,14 @@
             color: var(--text-primary);
         }
 
-        td.value-cell {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 13px;
-            color: #334155;
-        }
+      td.value-cell {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    color: #334155;
+    /* --- Added changes below --- */
+    max-width: 180px;           /* Limits maximum column width */
+    word-break: break-all;      /* Forces long unbroken text to wrap */
+}
 
         tr:last-child td {
             border-bottom: none;
