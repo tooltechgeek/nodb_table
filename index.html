@@ -42,7 +42,8 @@
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
-        overflow: hidden;
+        overflow-x: auto; /* CHANGED from overflow: hidden to allow swiping */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     }
 
     /* Table Styling */
@@ -332,20 +333,25 @@
                 container.innerHTML = '';
 
                 // Create Card Container
-                const card = document.createElement('div');
-                card.className = 'card';
+const card = document.createElement('div');
+card.className = 'card';
 
-                // Create Table
-                const table = document.createElement('table');
-                table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Value</th>
-                            <th style="width: 80px; text-align: right;">Action</th>
-                        </tr>
-                    </thead>
-                `;
+// CREATE A SCROLLABLE WRAPPER FOR THE TABLE
+const tableWrapper = document.createElement('div');
+tableWrapper.style.overflowX = 'auto';
+tableWrapper.style.width = '100%';
+
+// Create Table
+const table = document.createElement('table');
+table.innerHTML = `
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th style="width: 80px; text-align: right;">Action</th>
+        </tr>
+    </thead>
+`;
 
                 const tbody = document.createElement('tbody');
 
@@ -377,7 +383,9 @@
                 });
 
                 table.appendChild(tbody);
-                card.appendChild(table);
+                tableWrapper.appendChild(table); // Put the table inside the wrapper
+
+                
 
                 // Build Bottom Multi-Format Export Bar
                 const exportBar = document.createElement('div');
@@ -392,7 +400,7 @@
                     </select>
                     <button id="copyTableBtn" class="btn">Copy Table</button>
                 `;
-
+card.appendChild(tableWrapper);    // Put the wrapper inside the card
                 card.appendChild(exportBar);
                 container.appendChild(card);
 
