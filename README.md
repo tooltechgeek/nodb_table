@@ -13,10 +13,10 @@ dedicated app.
 Make a small csv file containing a column named id 
 
 ```
-id,make,model,link,notes
-101,Acme,Widget X-1,https://example.com/item/101,Tool bench unit
-102,Logi,MX Master 3S,https://example.com/item/102,Desk setup
-103,Bosch,Laser Measure,https://example.com/item/103,Field toolkit
+id,make,model,s/n,notes
+101,Acme,Widget X-1,81273812,Tool bench unit
+102,Logi,MX Master 3S,637213672,Desk setup
+103,Bosch,Laser Measure,63172171,Field toolkit
 ```
 Drop it onto our demo page
 
