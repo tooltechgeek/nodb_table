@@ -9,6 +9,25 @@ data.** Scan a label to view and copy its contents in a
 browser---without maintaining a backend database or relying on a
 dedicated app.
 
+## Try it now
+Make a small csv file containing a column named id 
+
+```
+id,make,model,link,notes
+101,Acme,Widget X-1,https://example.com/item/101,Tool bench unit
+102,Logi,MX Master 3S,https://example.com/item/102,Desk setup
+103,Bosch,Laser Measure,https://example.com/item/103,Field toolkit
+```
+Drop it onto our demo page
+
+[https://tooltechgeek.github.io/nodb_table/csv_to_qr_generator.html]
+
+Click 'Generate QR code'
+
+Scan the generated QR codes
+
+
+
 ## How It Works: Serverless Data Transport via URL Hash
 
 This project implements a lightweight, database-free architecture for conveying and extracting structured data straight from a QR code. By leveraging standard client-side web technologies and the URL fragment identifier, the system operates entirely without backend infrastructure, server databases, or companion apps.
